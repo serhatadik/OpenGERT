@@ -4,7 +4,7 @@ import pandas as pd
 import mitsuba as mi
 import drjit as dr
 import matplotlib.pyplot as plt
-from opengert.RT.utils import lonlat_to_sionna_xy
+from openge.RT.utils import lonlat_to_sionna_xy
 
 from sionna.rt import load_scene, Transmitter, Receiver, PlanarArray, Camera
 from sionna.rt.radio_material import RadioMaterial

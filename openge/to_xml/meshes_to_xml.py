@@ -1,11 +1,14 @@
 import bpy
-import mitsuba
+import mitsuba as mi
+import drjit as dr
 import shutil
+import glob
+import mathutils
 import os
 
-mitsuba.set_variant('scalar_rgb')
+mi.set_variant('scalar_rgb')
 
-class GeoExtentToSceneXML():
+class MeshesToSceneXML():
     def __init__(self, data_dir, min_lon, min_lat, max_lon, max_lat):
         self.min_lon = min_lon
         self.min_lat = min_lat
@@ -27,7 +30,7 @@ class GeoExtentToSceneXML():
         bpy.ops.preferences.addon_install(filepath=addon_path, overwrite=True)
         # Enable the installed addon using the correct module name
         bpy.ops.preferences.addon_enable(module=module_name)
-        print(f"Installed and enabled {module_name}")
+        print(f"[INFO]: Installed and enabled {module_name}")
         if module_name=="blosm":
             self.set_blosm_preferences()
 
@@ -50,6 +53,45 @@ class GeoExtentToSceneXML():
         print("[INFO]: Scene setup completed!")
 
         return None
+
+    @staticmethod
+    def get_object_center_xy(obj):
+        # Get the world-space coordinates of all vertices
+        vertices_world = [obj.matrix_world @ vert.co for vert in obj.data.vertices]
+
+        # Calculate the average of the x and y coordinates of the vertices
+        avg_x = sum(vert.x for vert in vertices_world) / len(vertices_world)
+        avg_y = sum(vert.y for vert in vertices_world) / len(vertices_world)
+
+        # Return the center coordinates (x, y)
+        return (avg_x, avg_y)
+    
+    @staticmethod
+    def get_terrain_height(terrain_obj, location_xy):
+        # Access the terrain mesh vertices
+        terrain_mesh = terrain_obj.data
+        closest_verts = []
+        
+        # Loop through all vertices to find the three closest points in 2D (x, y)
+        for vert in terrain_mesh.vertices:
+            world_coord = terrain_obj.matrix_world @ vert.co  # Vertex in world coordinates
+            vert_xy = mathutils.Vector((world_coord.x, world_coord.y))
+            
+            # Compute distance between the current vertex and the input location (x, y)
+            distance = (vert_xy - location_xy).length
+            closest_verts.append((distance, world_coord.z))
+        
+        # Sort vertices by distance and pick the closest three for consideration
+        closest_verts = sorted(closest_verts, key=lambda x: x[0])[:3]
+        
+        # If we have less than three, just return the closest one's z
+        if len(closest_verts) < 3:
+            return closest_verts[0][1]
+        
+        # Instead of averaging, return the maximum z of the three closest vertices
+        max_z = max(closest_verts, key=lambda x: x[1])[1]
+        
+        return max_z
 
     @staticmethod
     def create_material(name, rgba):
@@ -84,13 +126,13 @@ class GeoExtentToSceneXML():
         bpy.ops.blosm.import_data()
 
         return None
-    
+
     def update_materials(
         self,
         metal_rgba=(0.2, 0.9, 0.8, 1.0), 
         marble_rgba=(1.0, 0.0, 0.3, 1.0), 
         terrain_rgba=(0.9, 0.9, 0.9, 1.0),
-        default_rgba=(0.1, 0.1, 1.0, 1.0), 
+        default_rgba=(0.05, 0.05, 0.05, 1.0), 
         roof_material_name="itu_metal", 
         wall_material_name="itu_marble", 
         terrain_material_name="itu_concrete",
@@ -128,24 +170,66 @@ class GeoExtentToSceneXML():
 
         print("[INFO]: Materials updated successfully!")
         return None
-
     
+    def import_ply(self):
+        # Get a list of all PLY files in the folder
+        terrain_ply_file = glob.glob(os.path.join(os.path.join(self.data_dir, "meshes"), 'Terrain.ply'))[0]
+        bpy.ops.import_mesh.ply(filepath=terrain_ply_file)
+
+        ply_files = glob.glob(os.path.join(os.path.join(self.data_dir, "meshes"), '*.ply'))
+        material = self.create_material("itu_marble", (0.647, 0.165, 0.165, 1.0))
+        terrain_object = bpy.data.objects['Terrain']  # Change this name to match your terrain object name
+
+        # Loop over each PLY file
+        for filepath in ply_files:
+            if filepath.endswith("Terrain.ply"):
+                continue
+            # Deselect all objects
+            bpy.ops.object.select_all(action='DESELECT')
+
+            # Import the PLY file
+            bpy.ops.import_mesh.ply(filepath=filepath)
+
+            building_object = bpy.context.selected_objects[0]
+
+            building_object.select_set(True)
+            bpy.context.view_layer.objects.active = building_object
+
+            (x,y) = self.get_object_center_xy(building_object)
+            location_xy = mathutils.Vector((x, y))
+            terrain_height = self.get_terrain_height(terrain_object, location_xy)
+            print(f"Terrain height at {location_xy}: {terrain_height}")
+
+            # 5. Apply the vertical shift to align the building's floor with the terrain
+            building_object.location.z += terrain_height      
+            
+            # Get the imported object(s)
+            imported_objects = bpy.context.selected_objects
+
+            # Assign the material to each imported object
+            for obj in imported_objects:
+                if obj.type == 'MESH':
+                    # Ensure the object is active
+                    bpy.context.view_layer.objects.active = obj
+
+                    # Assign the material
+                    if obj.data.materials:
+                        # Assign to first material slot
+                        obj.data.materials[0] = material
+                    else:
+                        # No slots; append the material
+                        obj.data.materials.append(material)
+
+            print(f"[INFO]: Imported and assigned material to: {os.path.basename(filepath)}")
+
+        print("[INFO]: All PLY files have been imported and materials assigned.")
+
+        return None
+
     def export_scene_to_xml(self, export_filename="example.xml"):
         # Assuming mitsuba-blender provides an export operator
         export_path = os.path.join(self.data_dir, export_filename)
         bpy.ops.export_scene.mitsuba(filepath=export_path, export_ids=True, axis_forward='Y', axis_up = 'Z', ignore_background=True)
 
         print(f"[INFO]: Scene exported to {export_path}")
-        return None
-    
-    def delete_remnants(self):
-
-        folder_paths = [os.path.join(self.data_dir, 'osm'), os.path.join(self.data_dir, 'terrain')] 
-        for folder_path in folder_paths:
-            try:
-                shutil.rmtree(folder_path)
-                print(f"[INFO]: Folder {folder_path} and its contents deleted successfully.")
-            except OSError as e:
-                print(f"Error: {e.strerror}")
-
         return None

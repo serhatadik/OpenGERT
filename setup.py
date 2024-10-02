@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='opengert',
+    name='openge',
     version='0.1.0',
     description='Open source geometry extraction and ray-tracing module.',
     author='Serhat Tadik',
@@ -11,9 +11,20 @@ setup(
         'bpy==3.6',
         'mitsuba==3.4.1',
         'pandas',
+        'geopandas',
         'matplotlib',
         'sionna',
-        'geopy'
+        'geopy',
+        'mathutils',
+        'mercantile',
+        'shapely',
+        'trimesh',
+        'triangle',
+        'tqdm',
+        'pyproj',
+        'rasterio',
+        'plyfile',
+        'requests'
     ],
     python_requires='==3.10.11', 
     scripts=[
