@@ -103,7 +103,7 @@ def perturb_building_heights(scene, perturb_sigma):
         building_groups = {}
         for key, obj in scene._scene_objects.items():
             name = obj._name
-            base_name = re.split(r'-itu', name)[0]  # Split at '_itu' and take the first part
+            base_name = re.split(r'-itu', name)[0]  # Split at '-itu' and take the first part
             if "terrain" not in base_name.lower() and "ground" not in base_name.lower():
                 if base_name not in building_groups:
                     building_groups[base_name] = []
@@ -147,7 +147,7 @@ def perturb_building_heights(scene, perturb_sigma):
                     # Apply perturbation only to the vertices at the maximum height
                     vertex_positions.z = dr.select(
                         is_above_floor,
-                        vertex_positions.z + perturbation,
+                        dr.maximum(vertex_positions.z + perturbation, group_min_z + epsilon),
                         vertex_positions.z
                     )
 
@@ -214,11 +214,12 @@ def perturb_building_positions(scene, perturb_sigma):
             else:
                 print(f"Object '{obj._name}' does not have 'vertex_positions', skipping.")
 
-def perturb_material_properties(scene, rel_perm_sigma, cond_sigma):
+def perturb_material_properties(scene, rel_perm_sigma, cond_sigma, verbose=True):
 
-    for mat in list(scene.radio_materials.values()):
-        if mat.is_used:
-            print(f"Name: {mat.name}, used by {mat.use_counter} scene objects.")
+    if verbose:
+        for mat in list(scene.radio_materials.values()):
+            if mat.is_used:
+                print(f"Name: {mat.name}, used by {mat.use_counter} scene objects.")
 
     for mat in scene.radio_materials.values():
         if mat.is_used:        
@@ -235,11 +236,17 @@ def perturb_material_properties(scene, rel_perm_sigma, cond_sigma):
                                     relative_permittivity = rel_perm_mod,
                                     conductivity = cond_mod )
             scene.add(new_mat)
-
+            if verbose:
+                print(f"New material name: {new_mat.name}")
+                print(f"Relative permittivity: {rel_perm_mod}")
+                print(f"Conductivity: {cond_mod}")
     # Assign trainable materials to the corresponding objects
     for obj in scene.objects.values():
         obj.radio_material = obj.radio_material.name + "_mod"
 
-    for mat in list(scene.radio_materials.values()):
-        if mat.is_used:
-            print(f"Name: {mat.name}, used by {mat.use_counter} scene objects.")
+    if verbose:
+        for mat in list(scene.radio_materials.values()):
+            if mat.is_used:
+                print(f"Name: {mat.name}, used by {mat.use_counter} scene objects.")
+
+    return None
