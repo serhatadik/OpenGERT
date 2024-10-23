@@ -57,39 +57,39 @@ def change_unk_materials(scene, default_name = "itu_marble"):
 
 def find_highest_z_at_xy(scene, query_x, query_y, include_ground=False):
     """
-    Finds the highest z value at a given (x, y) pair in the scene.
+    Finds the highest z value and the corresponding object name at a given (x, y) pair in the scene.
     
     :param scene: A Scene object containing a list of 3D objects
     :param query_x: The x coordinate to query
     :param query_y: The y coordinate to query
-    :return: The highest z value at the queried (x, y) position
+    :param include_ground: Whether to include ground/terrain objects in the computation (default: False)
+    :return: A tuple containing the highest z value and the name of the object it belongs to
     """
     closest_z = None
+    object_name_with_highest_z = None
 
     for key in scene._scene_objects.keys():
         name = scene._scene_objects[key]._name
-        if include_ground==False:
+        if not include_ground:
             if "terrain" in name.lower() or "ground" in name.lower():
                 continue
-        mi_shape = scene._scene_objects[key]._mi_shape
 
+        mi_shape = scene._scene_objects[key]._mi_shape
         face_indices3 = mi_shape.face_indices(dr.arange(mi.UInt32, mi_shape.face_count()))
-        # Flatten. This is required for calling vertex_position
-        # [n_prims*3]
+        # Flatten the indices for vertex extraction
         face_indices = dr.ravel(face_indices3)
-        # Get vertices coordinates
-        # [n_prims*3, 3]
         vertex_coords = mi_shape.vertex_position(face_indices)
+
         for vertex in np.array(vertex_coords):
             x, y, z = vertex
-            distance = (x - query_x)**2 + (y - query_y)**2
-            
+            distance = (x - query_x) ** 2 + (y - query_y) ** 2
+
             # Check if this vertex is closer than any previous vertex
-            if closest_z is None:
+            if closest_z is None or (distance < 25 and z > closest_z):
                 closest_z = z
-            if distance < 25:
-                closest_z = max(z, closest_z)
-    return closest_z
+                object_name_with_highest_z = name
+
+    return closest_z, object_name_with_highest_z
 
 def perturb_building_heights(scene, perturb_sigma):
     """
@@ -110,6 +110,7 @@ def perturb_building_heights(scene, perturb_sigma):
                 building_groups[base_name].append(key)
         
         # Process each building group
+        bldg_group_to_perturbation = {}
         for base_name, object_keys in building_groups.items():
             # Find the maximum z-coordinate across all objects in the group
             group_min_z = None
@@ -129,7 +130,6 @@ def perturb_building_heights(scene, perturb_sigma):
             # Generate a single random perturbation for the entire building group
             #perturbation = np.random.uniform(200, 300)
             perturbation = perturb_sigma * np.random.randn()
-
             # Apply the perturbation to all objects in the group
             for key in object_keys:
                 obj = scene._scene_objects[key]
@@ -141,15 +141,20 @@ def perturb_building_heights(scene, perturb_sigma):
                     vertex_positions = dr.unravel(mi.Point3f, vertex_positions)
 
                     # Create a mask for vertices at or very close to the maximum height
-                    epsilon = 1
+                    epsilon = 0.001
                     is_above_floor = (vertex_positions.z - group_min_z) > epsilon
 
                     # Apply perturbation only to the vertices at the maximum height
                     vertex_positions.z = dr.select(
                         is_above_floor,
-                        dr.maximum(vertex_positions.z + perturbation, group_min_z + epsilon),
+                        dr.maximum(vertex_positions.z + perturbation, vertex_positions.z),
                         vertex_positions.z
                     )
+
+                    if dr.sum(is_above_floor)>0:
+                        bldg_group_to_perturbation[base_name] = perturbation
+                    else:
+                        bldg_group_to_perturbation[base_name] = 0
 
                     # Flatten vertex_positions back to original shape
                     vertex_positions = dr.ravel(vertex_positions)
@@ -164,7 +169,8 @@ def perturb_building_heights(scene, perturb_sigma):
     except Exception as e:
         print(f"An error occurred: {str(e)}")
         raise  # Re-raise the exception for higher-level error handling
-
+    
+    return bldg_group_to_perturbation
 
 def perturb_building_positions(scene, perturb_sigma):
     """
@@ -173,6 +179,7 @@ def perturb_building_positions(scene, perturb_sigma):
 
     :param scene: A Scene object containing a list of 3D objects.
     """
+    bldg_group_to_perturbation = {}
     # Group objects by their base name (without material)
     building_groups = {}
     for key, obj in scene._scene_objects.items():
@@ -188,7 +195,7 @@ def perturb_building_positions(scene, perturb_sigma):
         # Generate a single random perturbation for the entire building group
         perturbation_x = perturb_sigma * np.random.randn()
         perturbation_y = perturb_sigma * np.random.randn()
-
+        bldg_group_to_perturbation[base_name] = [perturbation_x, perturbation_y]
         # Apply the perturbation to all objects in the group
         for key in object_keys:
             obj = scene._scene_objects[key]
@@ -213,6 +220,8 @@ def perturb_building_positions(scene, perturb_sigma):
                 mi_shape.parameters_changed()
             else:
                 print(f"Object '{obj._name}' does not have 'vertex_positions', skipping.")
+
+    return bldg_group_to_perturbation
 
 def perturb_material_properties(scene, rel_perm_sigma, cond_sigma, verbose=True):
 
@@ -240,6 +249,7 @@ def perturb_material_properties(scene, rel_perm_sigma, cond_sigma, verbose=True)
                 print(f"New material name: {new_mat.name}")
                 print(f"Relative permittivity: {rel_perm_mod}")
                 print(f"Conductivity: {cond_mod}")
+
     # Assign trainable materials to the corresponding objects
     for obj in scene.objects.values():
         obj.radio_material = obj.radio_material.name + "_mod"

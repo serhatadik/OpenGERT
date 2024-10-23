@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='openge',
+    name='opengert',
     version='0.1.0',
     description='Open source geometry extraction and ray-tracing module.',
     author='Serhat Tadik',
@@ -24,11 +24,12 @@ setup(
         'pyproj',
         'rasterio',
         'plyfile',
-        'requests'
+        'requests',
     ],
-    python_requires='==3.10.11', 
+    python_requires='~=3.10', 
     scripts=[
         'scripts/call_ge.py',
-        'scripts/call_rt.py'
+        'scripts/call_rt.py',
+        'scripts/run_montecarlo.py'
     ]
 )
