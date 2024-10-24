@@ -1,12 +1,10 @@
 import geopy
-import sionna.rt
 from sionna.rt.radio_material import RadioMaterial
 import numpy as np
 import mitsuba as mi
 import drjit as dr
 import re
-import matplotlib.pyplot as plt
-import tensorflow as tf
+import random
 
 def lonlat_to_sionna_xy(lat, lon, min_lon, min_lat, max_lon, max_lat):
     # Calculate the center of the scene
@@ -65,8 +63,11 @@ def find_highest_z_at_xy(scene, query_x, query_y, include_ground=False):
     :param include_ground: Whether to include ground/terrain objects in the computation (default: False)
     :return: A tuple containing the highest z value and the name of the object it belongs to
     """
+    closest_x = None
+    closest_y = None
     closest_z = None
-    object_name_with_highest_z = None
+    closest_distance =  1e5
+    object_name_with_closest_xy = None
 
     for key in scene._scene_objects.keys():
         name = scene._scene_objects[key]._name
@@ -83,13 +84,15 @@ def find_highest_z_at_xy(scene, query_x, query_y, include_ground=False):
         for vertex in np.array(vertex_coords):
             x, y, z = vertex
             distance = (x - query_x) ** 2 + (y - query_y) ** 2
-
             # Check if this vertex is closer than any previous vertex
-            if closest_z is None or (distance < 25 and z > closest_z):
+            if closest_z is None or (distance < closest_distance):
+                closest_x = x
+                closest_y = y
                 closest_z = z
-                object_name_with_highest_z = name
+                closest_distance = distance
+                object_name_with_closest_xy = name
 
-    return closest_z, object_name_with_highest_z
+    return closest_x, closest_y, closest_z, object_name_with_closest_xy
 
 def perturb_building_heights(scene, perturb_sigma):
     """
@@ -223,40 +226,93 @@ def perturb_building_positions(scene, perturb_sigma):
 
     return bldg_group_to_perturbation
 
-def perturb_material_properties(scene, rel_perm_sigma, cond_sigma, verbose=True):
+# Function to sample a material randomly considering their probabilities
+def sample_material(probabilities=None):
+
+    # List of materials and their corresponding probabilities
+    materials = [
+        "itu_concrete", "itu_brick", "itu_plasterboard", "itu_wood", 
+        "itu_glass", "itu_ceiling_board", "itu_chipboard", "itu_plywood", 
+        "itu_marble", "itu_metal", "itu_very_dry_ground", "itu_medium_dry_ground",
+        "itu_wet_ground"
+    ]
+
+    if probabilities is None:
+        probabilities = [
+            0.25, 0.15, 0.1, 0.1, 
+            0.05, 0.05, 0.03, 0.07, 
+            0.05, 0.05, 0.02, 0.05,
+            0.03
+        ]
+
+    return random.choices(materials, weights=probabilities, k=1)[0]
+
+
+def perturb_material_properties(scene, material_types_known, verbose=True, **kwargs):
 
     if verbose:
         for mat in list(scene.radio_materials.values()):
             if mat.is_used:
                 print(f"Name: {mat.name}, used by {mat.use_counter} scene objects.")
 
-    for mat in scene.radio_materials.values():
-        if mat.is_used:        
-            # Create new trainable material with some default values
-            cond_mod = -1.0
-            while cond_mod < 0:
-                cond_mod = mat.conductivity + cond_sigma * np.random.randn()
-            
-            rel_perm_mod = -1.0
-            while rel_perm_mod <= 1.0:
-                rel_perm_mod = mat.relative_permittivity + rel_perm_sigma * np.random.randn()  
+    bldg_mat = {}
+    if material_types_known:
+        rel_perm_sigma_ratio, cond_sigma_ratio = 0.1, 0.1
+        if 'rel_perm_sigma_ratio' in kwargs:
+            rel_perm_sigma_ratio = kwargs['rel_perm_sigma_ratio']
+        if 'cond_sigma_ratio' in kwargs:
+            cond_sigma_ratio = kwargs['rel_perm_sigma_ratio']
 
-            new_mat = RadioMaterial(mat.name + "_mod",
-                                    relative_permittivity = rel_perm_mod,
-                                    conductivity = cond_mod )
-            scene.add(new_mat)
-            if verbose:
-                print(f"New material name: {new_mat.name}")
-                print(f"Relative permittivity: {rel_perm_mod}")
-                print(f"Conductivity: {cond_mod}")
+        material_perturbation = {}
 
-    # Assign trainable materials to the corresponding objects
-    for obj in scene.objects.values():
-        obj.radio_material = obj.radio_material.name + "_mod"
+        for mat in scene.radio_materials.values():
+            if mat.is_used:        
+                # Create new trainable material with some default values
+                cond_mod = -1.0
+                cond_sigma = mat.conductivity * cond_sigma_ratio
+                while cond_mod < 0:
+                    cond_perturbation = cond_sigma * np.random.randn()
+                    cond_mod = mat.conductivity + cond_perturbation
+
+                rel_perm_mod = -1.0
+                rel_perm_sigma = mat.relative_permittivity * rel_perm_sigma_ratio
+                while rel_perm_mod <= 1.0:
+                    rel_perm_perturbation = rel_perm_sigma * np.random.randn()
+                    rel_perm_mod = mat.relative_permittivity + rel_perm_perturbation
+
+                material_perturbation[mat.name] = {'material': mat.name, 'cond_perturbation': cond_perturbation.numpy(), 'rel_perm_perturbation': rel_perm_perturbation.numpy()}
+
+                new_mat = RadioMaterial(mat.name + "_mod",
+                                        relative_permittivity = rel_perm_mod,
+                                        conductivity = cond_mod )
+                scene.add(new_mat)
+                if verbose:
+                    print(f"New material name: {new_mat.name}")
+                    print(f"Relative permittivity: {rel_perm_mod}")
+                    print(f"Conductivity: {cond_mod}")
+
+        # Assign trainable materials to the corresponding objects
+        for obj in scene.objects.values():
+            bldg_mat[obj.name] = material_perturbation[obj.radio_material.name]
+            obj.radio_material = obj.radio_material.name + "_mod"
+        if verbose:
+            print(f"New material name: {new_mat.name}")
+            print(f"Relative permittivity: {rel_perm_mod}")
+            print(f"Conductivity: {cond_mod}")
+
+    elif material_types_known==0:
+        probabilities = None
+        if 'probabilities' in kwargs:
+            probabilities = kwargs['probabilities']
+        for obj in scene.objects.values():
+            obj.radio_material = sample_material(probabilities=probabilities)
+            bldg_mat[obj.name] = {'material': obj.radio_material.name, 'cond_perturbation': 0.0, 'rel_perm_perturbation': 0.0}
+
+
 
     if verbose:
         for mat in list(scene.radio_materials.values()):
             if mat.is_used:
                 print(f"Name: {mat.name}, used by {mat.use_counter} scene objects.")
 
-    return None
+    return bldg_mat
