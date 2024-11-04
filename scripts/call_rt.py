@@ -1,4 +1,4 @@
-from openge.RT.process import SimulationConfig, SimulationRunner
+from opengert.RT.process import SimulationConfig, SimulationRunner
 import argparse
 
 def main(args):

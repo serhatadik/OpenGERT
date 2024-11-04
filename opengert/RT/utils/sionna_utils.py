@@ -55,44 +55,58 @@ def change_unk_materials(scene, default_name = "itu_marble"):
 
 def find_highest_z_at_xy(scene, query_x, query_y, include_ground=False):
     """
-    Finds the highest z value and the corresponding object name at a given (x, y) pair in the scene.
+    Finds the rooftop z coordinate of the building closest to a given (x, y) pair in the scene.
     
     :param scene: A Scene object containing a list of 3D objects
     :param query_x: The x coordinate to query
     :param query_y: The y coordinate to query
     :param include_ground: Whether to include ground/terrain objects in the computation (default: False)
-    :return: A tuple containing the highest z value and the name of the object it belongs to
+    :return: A tuple containing the x, y of the query point, the highest z value at that point,
+             and the name of the building it belongs to
     """
-    closest_x = None
-    closest_y = None
-    closest_z = None
-    closest_distance =  1e5
-    object_name_with_closest_xy = None
+    closest_building_key = None
+    minimal_distance = None
 
+    # First pass: find the building whose vertex is closest to the query point
     for key in scene._scene_objects.keys():
-        name = scene._scene_objects[key]._name
-        if not include_ground:
-            if "terrain" in name.lower() or "ground" in name.lower():
-                continue
+        obj = scene._scene_objects[key]
+        name = obj._name
 
-        mi_shape = scene._scene_objects[key]._mi_shape
-        face_indices3 = mi_shape.face_indices(dr.arange(mi.UInt32, mi_shape.face_count()))
-        # Flatten the indices for vertex extraction
-        face_indices = dr.ravel(face_indices3)
-        vertex_coords = mi_shape.vertex_position(face_indices)
+        if not include_ground and ("terrain" in name.lower() or "ground" in name.lower()):
+            continue
 
-        for vertex in np.array(vertex_coords):
-            x, y, z = vertex
-            distance = (x - query_x) ** 2 + (y - query_y) ** 2
-            # Check if this vertex is closer than any previous vertex
-            if closest_z is None or (distance < closest_distance):
-                closest_x = x
-                closest_y = y
-                closest_z = z
-                closest_distance = distance
-                object_name_with_closest_xy = name
+        mi_shape = obj._mi_shape
+        face_indices = dr.ravel(mi_shape.face_indices(dr.arange(mi.UInt32, mi_shape.face_count())))
+        vertex_coords = np.array(mi_shape.vertex_position(face_indices))
 
-    return closest_x, closest_y, closest_z, object_name_with_closest_xy
+        # Find the minimal distance from any vertex in this object to the query point
+        distances = np.sum((vertex_coords[:, :2] - np.array([query_x, query_y]))**2, axis=1)
+        min_distance_in_obj = np.min(distances)
+
+        if minimal_distance is None or min_distance_in_obj < minimal_distance:
+            minimal_distance = min_distance_in_obj
+            closest_building_key = key
+
+    if closest_building_key is None:
+        return query_x, query_y, None, None  # No building found
+
+    # Second pass: within the closest building, find the highest z near the query point
+    mi_shape = scene._scene_objects[closest_building_key]._mi_shape
+    face_indices = dr.ravel(mi_shape.face_indices(dr.arange(mi.UInt32, mi_shape.face_count())))
+    vertex_coords = np.array(mi_shape.vertex_position(face_indices))
+
+    threshold_distance = 1.0  # Adjust this threshold based on scene scale
+    distances = np.sum((vertex_coords[:, :2] - np.array([query_x, query_y]))**2, axis=1)
+    close_vertices = vertex_coords[distances <= threshold_distance ** 2]
+
+    if close_vertices.size > 0:
+        highest_z = np.max(close_vertices[:, 2])
+    else:
+        # If no vertices are within the threshold, use the highest z in the building
+        highest_z = np.max(vertex_coords[:, 2])
+
+    object_name = scene._scene_objects[closest_building_key]._name
+    return query_x, query_y, highest_z, object_name
 
 def perturb_building_heights(scene, perturb_sigma):
     """

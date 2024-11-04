@@ -1,12 +1,8 @@
-import bpy
 import mitsuba as mi
 import drjit as dr
 import shutil
 import glob
-import mathutils
 import os
-
-mi.set_variant('scalar_rgb')
 
 class MeshesToSceneXML():
     def __init__(self, data_dir, min_lon, min_lat, max_lon, max_lat):
@@ -17,6 +13,11 @@ class MeshesToSceneXML():
         self.data_dir = data_dir
 
     def set_blosm_preferences(self):
+        try:
+            import bpy
+        except ImportError:
+            raise ImportError("Blender's 'bpy' module is required for set_blosm_preferences(). Please run this method within Blender's Python environment.")
+
         # Get addon preferences for blosm
         preferences = bpy.context.preferences
         addon_prefs = preferences.addons['blosm'].preferences
@@ -26,21 +27,36 @@ class MeshesToSceneXML():
         print(f"[INFO]: Set OSM data directory to: {self.data_dir}")
 
     def install_and_enable_addon(self, addon_path, module_name):
+        try:
+            import bpy
+        except ImportError:
+            raise ImportError("Blender's 'bpy' module is required for install_and_enable_addon(). Please run this method within Blender's Python environment.")
+
         # Install the addon from the provided path or zip file
         bpy.ops.preferences.addon_install(filepath=addon_path, overwrite=True)
         # Enable the installed addon using the correct module name
         bpy.ops.preferences.addon_enable(module=module_name)
         print(f"[INFO]: Installed and enabled {module_name}")
-        if module_name=="blosm":
+        if module_name == "blosm":
             self.set_blosm_preferences()
 
     @staticmethod
     def setup_scene():
+        try:
+            import bpy
+        except ImportError:
+            raise ImportError("Blender's 'bpy' module is required for setup_scene(). Please run this method within Blender's Python environment.")
+
         if "Cube" in bpy.data.objects or "Camera" in bpy.data.objects:
             # Set the 'Cube' object as the active object
-            bpy.context.view_layer.objects.active = bpy.data.objects["Cube"]
-            bpy.data.objects["Cube"].select_set(True)
-            bpy.ops.object.delete()
+            if "Cube" in bpy.data.objects:
+                bpy.context.view_layer.objects.active = bpy.data.objects["Cube"]
+                bpy.data.objects["Cube"].select_set(True)
+                bpy.ops.object.delete()
+
+            if "Camera" in bpy.data.objects:
+                bpy.data.objects["Camera"].select_set(True)
+                bpy.ops.object.delete()
 
         # Create a new world if it doesn't already exist
         if "World" not in bpy.data.worlds:
@@ -48,14 +64,17 @@ class MeshesToSceneXML():
 
         world = bpy.data.worlds['World']
         if world.node_tree:
-            world.node_tree.nodes["Background"].inputs[0].default_value[2] = 0.97 # RGBA
+            world.node_tree.nodes["Background"].inputs[0].default_value[2] = 0.97  # RGBA
 
         print("[INFO]: Scene setup completed!")
 
-        return None
-
     @staticmethod
     def get_object_center_xy(obj):
+        try:
+            import bpy
+        except ImportError:
+            raise ImportError("Blender's 'bpy' module is required for get_object_center_xy(). Please run this method within Blender's Python environment.")
+
         # Get the world-space coordinates of all vertices
         vertices_world = [obj.matrix_world @ vert.co for vert in obj.data.vertices]
 
@@ -65,43 +84,54 @@ class MeshesToSceneXML():
 
         # Return the center coordinates (x, y)
         return (avg_x, avg_y)
-    
+
     @staticmethod
     def get_terrain_height(terrain_obj, location_xy):
+        try:
+            import bpy
+            import mathutils
+        except ImportError:
+            raise ImportError("Blender's 'bpy' module is required for get_terrain_height(). Please run this method within Blender's Python environment.")
+
         # Access the terrain mesh vertices
         terrain_mesh = terrain_obj.data
         closest_verts = []
-        
+
         # Loop through all vertices to find the three closest points in 2D (x, y)
         for vert in terrain_mesh.vertices:
             world_coord = terrain_obj.matrix_world @ vert.co  # Vertex in world coordinates
             vert_xy = mathutils.Vector((world_coord.x, world_coord.y))
-            
+
             # Compute distance between the current vertex and the input location (x, y)
             distance = (vert_xy - location_xy).length
             closest_verts.append((distance, world_coord.z))
-        
+
         # Sort vertices by distance and pick the closest three for consideration
         closest_verts = sorted(closest_verts, key=lambda x: x[0])[:3]
-        
+
         # If we have less than three, just return the closest one's z
         if len(closest_verts) < 3:
             return closest_verts[0][1]
-        
+
         # Instead of averaging, return the maximum z of the three closest vertices
         max_z = max(closest_verts, key=lambda x: x[1])[1]
-        
+
         return max_z
 
     @staticmethod
     def create_material(name, rgba):
+        try:
+            import bpy
+        except ImportError:
+            raise ImportError("Blender's 'bpy' module is required for create_material(). Please run this method within Blender's Python environment.")
+
         # Check if the material already exists
         mat = bpy.data.materials.get(name)
         if mat is None:
             # Create a new material
             mat = bpy.data.materials.new(name=name)
             mat.use_nodes = True  # Enable nodes
-            
+
             # Get the Principled BSDF node
             bsdf = mat.node_tree.nodes.get('Principled BSDF')
             if bsdf is not None:
@@ -109,13 +139,18 @@ class MeshesToSceneXML():
         return mat
 
     def import_blosm_data(self, data_type):
+        try:
+            import bpy
+        except ImportError:
+            raise ImportError("Blender's 'bpy' module is required for import_blosm_data(). Please run this method within Blender's Python environment.")
+
         # Use blosm to import OpenStreetMap data within the given coordinates
         bpy.data.scenes["Scene"].blosm.maxLat = self.max_lat
         bpy.data.scenes["Scene"].blosm.maxLon = self.max_lon
         bpy.data.scenes["Scene"].blosm.minLat = self.min_lat
         bpy.data.scenes["Scene"].blosm.minLon = self.min_lon
         bpy.data.scenes["Scene"].blosm.dataType = data_type
-        if data_type=="osm":
+        if data_type == "osm":
             blsm = bpy.data.scenes["Scene"].blosm
             blsm.water = False
             blsm.forests = False
@@ -125,19 +160,24 @@ class MeshesToSceneXML():
             blsm.singleObject = False
         bpy.ops.blosm.import_data()
 
-        return None
+        print("[INFO]: OpenStreetMap data imported successfully.")
 
     def update_materials(
         self,
-        metal_rgba=(0.2, 0.9, 0.8, 1.0), 
-        marble_rgba=(1.0, 0.0, 0.3, 1.0), 
+        metal_rgba=(0.2, 0.9, 0.8, 1.0),
+        marble_rgba=(1.0, 0.0, 0.3, 1.0),
         terrain_rgba=(0.9, 0.9, 0.9, 1.0),
-        default_rgba=(0.05, 0.05, 0.05, 1.0), 
-        roof_material_name="itu_metal", 
-        wall_material_name="itu_marble", 
+        default_rgba=(0.05, 0.05, 0.05, 1.0),
+        roof_material_name="itu_metal",
+        wall_material_name="itu_marble",
         terrain_material_name="itu_concrete",
-        default_material_name="itu_brick", 
+        default_material_name="itu_brick",
     ):
+        try:
+            import bpy
+        except ImportError:
+            raise ImportError("Blender's 'bpy' module is required for update_materials(). Please run this method within Blender's Python environment.")
+
         # Create materials with the specified RGBA values
         roof_material = self.create_material(roof_material_name, metal_rgba)
         wall_material = self.create_material(wall_material_name, marble_rgba)
@@ -154,7 +194,7 @@ class MeshesToSceneXML():
                         elif mat.name == "wall":
                             obj.data.materials[i] = wall_material
                         elif mat.name.lower() == "terrain":
-                            obj.data.materials[i] == terrain_material
+                            obj.data.materials[i] = terrain_material
                 else:
                     if default_material_name == "itu_metal":
                         default_material = roof_material
@@ -164,19 +204,24 @@ class MeshesToSceneXML():
                         default_material = terrain_material
                     else:
                         default_material = self.create_material(default_material_name, default_rgba)
-                    
+
                     # No materials, so assign the default material
                     obj.data.materials.append(default_material)
 
         print("[INFO]: Materials updated successfully!")
-        return None
-    
+
     def import_ply(self):
+        try:
+            import bpy
+            import mathutils
+        except ImportError:
+            raise ImportError("Blender's 'bpy' module is required for import_ply(). Please run this method within Blender's Python environment.")
+
         # Get a list of all PLY files in the folder
-        terrain_ply_file = glob.glob(os.path.join(os.path.join(self.data_dir, "meshes"), 'Terrain.ply'))[0]
+        terrain_ply_file = glob.glob(os.path.join(self.data_dir, "meshes", 'Terrain.ply'))[0]
         bpy.ops.import_mesh.ply(filepath=terrain_ply_file)
 
-        ply_files = glob.glob(os.path.join(os.path.join(self.data_dir, "meshes"), '*.ply'))
+        ply_files = glob.glob(os.path.join(self.data_dir, "meshes", '*.ply'))
         material = self.create_material("itu_marble", (0.647, 0.165, 0.165, 1.0))
         terrain_object = bpy.data.objects['Terrain']  # Change this name to match your terrain object name
 
@@ -195,14 +240,14 @@ class MeshesToSceneXML():
             building_object.select_set(True)
             bpy.context.view_layer.objects.active = building_object
 
-            (x,y) = self.get_object_center_xy(building_object)
+            (x, y) = self.get_object_center_xy(building_object)
             location_xy = mathutils.Vector((x, y))
             terrain_height = self.get_terrain_height(terrain_object, location_xy)
             print(f"Terrain height at {location_xy}: {terrain_height}")
 
-            # 5. Apply the vertical shift to align the building's floor with the terrain
-            building_object.location.z += terrain_height      
-            
+            # Apply the vertical shift to align the building's floor with the terrain
+            building_object.location.z += terrain_height
+
             # Get the imported object(s)
             imported_objects = bpy.context.selected_objects
 
@@ -224,12 +269,20 @@ class MeshesToSceneXML():
 
         print("[INFO]: All PLY files have been imported and materials assigned.")
 
-        return None
-
     def export_scene_to_xml(self, export_filename="example.xml"):
+        try:
+            import bpy
+        except ImportError:
+            raise ImportError("Blender's 'bpy' module is required for export_scene_to_xml(). Please run this method within Blender's Python environment.")
+
         # Assuming mitsuba-blender provides an export operator
         export_path = os.path.join(self.data_dir, export_filename)
-        bpy.ops.export_scene.mitsuba(filepath=export_path, export_ids=True, axis_forward='Y', axis_up = 'Z', ignore_background=True)
+        bpy.ops.export_scene.mitsuba(
+            filepath=export_path,
+            export_ids=True,
+            axis_forward='Y',
+            axis_up='Z',
+            ignore_background=True
+        )
 
         print(f"[INFO]: Scene exported to {export_path}")
-        return None

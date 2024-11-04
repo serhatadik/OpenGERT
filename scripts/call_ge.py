@@ -1,5 +1,5 @@
-from openge.mesh_creation import TerrainMeshGenerator, BuildingFootprintProcessor
-from openge.to_xml import MeshesToSceneXML
+from opengert.mesh_creation import TerrainMeshGenerator, BuildingFootprintProcessor
+from opengert.to_xml import MeshesToSceneXML
 import argparse
 
 def main(mitsuba_blender_path, min_lon, min_lat, max_lon, max_lat, data_dir, export_filename, url_csv_file):
