@@ -88,6 +88,7 @@ def find_highest_z_at_xy(scene, query_x, query_y, include_ground=False):
             closest_building_key = key
 
     if closest_building_key is None:
+        print("No building for the queried (x,y) coordinate was found. Exiting.")
         return query_x, query_y, None, None  # No building found
 
     # Second pass: within the closest building, find the highest z near the query point
@@ -95,7 +96,7 @@ def find_highest_z_at_xy(scene, query_x, query_y, include_ground=False):
     face_indices = dr.ravel(mi_shape.face_indices(dr.arange(mi.UInt32, mi_shape.face_count())))
     vertex_coords = np.array(mi_shape.vertex_position(face_indices))
 
-    threshold_distance = 1.0  # Adjust this threshold based on scene scale
+    threshold_distance = 3.0  # Adjust this threshold based on scene scale
     distances = np.sum((vertex_coords[:, :2] - np.array([query_x, query_y]))**2, axis=1)
     close_vertices = vertex_coords[distances <= threshold_distance ** 2]
 

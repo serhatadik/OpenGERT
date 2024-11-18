@@ -13,6 +13,8 @@ setup(
         'pandas',
         'geopandas',
         'matplotlib',
+        'seaborn',
+        'tensorflow[and-cuda]==2.15.1',
         'sionna',
         'geopy',
         'mathutils',
@@ -25,6 +27,7 @@ setup(
         'rasterio',
         'plyfile',
         'requests',
+
     ],
     python_requires='~=3.10', 
     scripts=[
