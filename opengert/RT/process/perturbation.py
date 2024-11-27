@@ -327,7 +327,8 @@ class PerturbationSimulationManager:
         perturbation_config["cm_cell_size"] = cm_cell_size
         perturbation_config["cm_cell_size2"] = cm_cell_size2
         perturbation_config["grid_origin"] = grid_origin.numpy().tolist()
-        perturbation_config["grid_origin2"] = grid_origin2.numpy().tolist()
+        if analyze_chan_stats:
+            perturbation_config["grid_origin2"] = grid_origin2.numpy().tolist()
         perturbation_config["tx_loc"] = [*tx_xy, tx_z]
         perturbation_config["tx_dir"] = tx_dir
         with open(os.path.join(tx_dir, "config.json"), 'w', encoding='utf-8') as f:
