@@ -30,14 +30,14 @@ if __name__ == '__main__':
     #tracker = PerturbationTracker()
 
     # Define a list of transmitter locations
-    tx_locations = np.random.uniform(-450, 450, (10, 2)).tolist()
+    tx_locations = np.random.uniform(-400, 400, (10, 2)).tolist()
 
     perturbation_config = {
         'scene_name': "munich",  # Enter the file name with xml extension here if scene is not readily available in Sionna RT.
         'use_gpu': USE_GPU,
         'analyze_chan_stats': True,
         'batch_size': 70 if USE_GPU else 20,
-        'output_dir': "path_gain_results2",
+        'output_dir': "results_munich_height_pert",
         'device': '/device:GPU:0' if USE_GPU else '/device:CPU:0',
         'num_perturbations': 50 if USE_GPU else 30,
         'tx_antenna_height': 6,

@@ -83,7 +83,7 @@ def perturb_building_heights(scene, perturb_sigma):
                     print(f"Object '{obj._name}' does not have 'vertex_positions', skipping.")
     except Exception as e:
         print(f"An error occurred: {str(e)}")
-        raise  # Re-raise the exception for higher-level error handling
+        raise 
     
     return bldg_group_to_perturbation
 
@@ -196,7 +196,7 @@ def perturb_material_properties(scene, material_types_known, verbose=False, **kw
             cond_sigma = original_material.conductivity * cond_sigma_ratio
             rel_perm_sigma = original_material.relative_permittivity * rel_perm_sigma_ratio
             
-            # Generate valid perturbations for this specific object
+            # Generate valid perturbations
             cond_mod = -1.0
             while cond_mod < 0:
                 cond_perturbation = cond_sigma * np.random.randn()

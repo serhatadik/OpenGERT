@@ -2,13 +2,16 @@ import os
 import sys
 import gc
 import re
+import shutil
+import glob
 import subprocess
 import multiprocessing
 from contextlib import nullcontext
 from typing import Dict, Any, Optional, Tuple, List
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from functools import partial
-
+import traceback
+import logging
 # Third-party imports
 import numpy as np
 import matplotlib.pyplot as plt
@@ -98,6 +101,93 @@ from opengert.RT.utils import (
     #PerturbationTracker
 )
 
+def get_missing_perturbation_indices(tx_dir: str, num_perturbations: int) -> list:
+    """
+    Find the indices of perturbations missing from the specified directory.
+    
+    Args:
+        tx_dir (str): Directory to search for perturbation files
+        num_perturbations (int): Total number of expected perturbations (0-indexed)
+    
+    Returns:
+        list: Sorted list of indices missing from the directory
+    """
+    if not os.path.exists(tx_dir):
+        return list(range(num_perturbations + 1))
+        
+    found_indices = set()
+    pattern = re.compile(r'perturb_(\d+)_path_gain\.npy$')
+    
+    for filename in os.listdir(tx_dir):
+        match = pattern.search(filename)
+        if match:
+            index = int(match.group(1))
+            found_indices.add(index)
+    
+    # Generate the set of all expected indices
+    all_indices = set(range(num_perturbations))
+    
+    # Find and return the missing indices
+    missing_indices = sorted(list(all_indices - found_indices))
+    
+    return missing_indices
+
+def load_all_perturbation_files(tx_dir: str) -> Dict[str, List[np.ndarray]]:
+    """
+    Load all perturbation files from the directory.
+    Returns dictionary with lists of path_gain, med, ds, and K arrays.
+    
+    Parameters:
+        tx_dir: Directory containing perturbation files
+        
+    Returns:
+        Dictionary containing lists of numpy arrays for each metric type
+    """
+    path_gain_list = []
+    med_list = []
+    ds_list = []
+    K_list = []
+    
+    # Get all .npy files in directory
+    files = [f for f in os.listdir(tx_dir) if f.endswith('.npy')]
+    
+    # Sort files by perturbation index to ensure consistent ordering
+    def get_perturbation_index(filename):
+        match = re.search(r'perturb_(\d+)', filename)
+        return int(match.group(1)) if match else -1
+    
+    files.sort(key=get_perturbation_index)
+    
+    # Categorize and load each file
+    for filename in files:
+        filepath = os.path.join(tx_dir, filename)
+        
+        try:
+            # Categorize file based on name pattern
+            if 'path_gain.npy' in filename:
+                path_gain_list.append(np.load(filepath))
+            elif 'mean_excess_delay.npy' in filename:
+                med_list.append(np.load(filepath))
+            elif 'delay_spread.npy' in filename:
+                ds_list.append(np.load(filepath))
+            elif '_K.npy' in filename:
+                K_list.append(np.load(filepath))
+                
+        except Exception as e:
+            print(f"Error loading file {filename}: {str(e)}")
+            continue
+    
+    print(f"Loaded {len(path_gain_list)} path gain files")
+    print(f"Loaded {len(med_list)} mean excess delay files")
+    print(f"Loaded {len(ds_list)} delay spread files")
+    print(f"Loaded {len(K_list)} K-factor files")
+    
+    return {
+        'path_gain': path_gain_list,
+        'med': med_list,
+        'ds': ds_list,
+        'K': K_list
+    }
 
 class PerturbationSimulationManager:
     def __init__(self, perturbation_config, tracker=None):
@@ -135,8 +225,8 @@ class PerturbationSimulationManager:
         # Get initial TX position
         if scene_name.lower()=="munich":
             scene_load_name = sionna.rt.scene.munich
-        elif scene_name.lower()=="etoille":
-            scene_load_name = sionna.rt.scene.etoille
+        elif scene_name.lower()=="etoile":
+            scene_load_name = sionna.rt.scene.etoile
         else:
             scene_load_name = scene_name
         self.scene_load_name = scene_load_name
@@ -148,9 +238,21 @@ class PerturbationSimulationManager:
         print(f"tx_xy: {tx_xy}")
         print(f"tx_z: {tx_z}")
         print(f"tx building: {tx_bldg}")
+        print(f"scene size: {scene.size}")
         del scene
         tx_dir = os.path.join(output_dir, f"tx_{tx_xy[0]}_{tx_xy[1]}")
         os.makedirs(tx_dir, exist_ok=True)
+
+        # Check for existing perturbations
+        missing_indices = get_missing_perturbation_indices(tx_dir, num_perturbations)
+        remaining_perturbations = len(missing_indices)
+        
+        if remaining_perturbations <= 0:
+            print(f"All {num_perturbations} perturbations already exist in {tx_dir}")
+            return
+        else:
+            print(f"Running {remaining_perturbations} more perturbations.")
+
 
         USE_GPU = self.perturbation_config.get('use_gpu', False)
 
@@ -185,7 +287,7 @@ class PerturbationSimulationManager:
                     perturb_sigma_position,
                     verbose
                 )
-                for pert_idx in range(num_perturbations)
+                for pert_idx in missing_indices
             ]
             process_func = process_perturbation_gpu
         else:
@@ -211,10 +313,14 @@ class PerturbationSimulationManager:
                     perturb_sigma_position,
                     verbose
                 )
-                for pert_idx in range(num_perturbations)
+                for pert_idx in missing_indices
             ]
             process_func = process_perturbation_cpu
 
+        if not tasks:
+            print("No new perturbations to process")
+            return
+            
         # Run perturbations
         results, path_gain_list, med_list, ds_list, K_list, grid_origin, cm_cell_size, grid_origin2, cm_cell_size2 = \
             self.run_perturbations(num_workers, tasks, process_func, tx_xy)
@@ -226,18 +332,27 @@ class PerturbationSimulationManager:
         perturbation_config["tx_dir"] = tx_dir
         with open(os.path.join(tx_dir, "config.json"), 'w', encoding='utf-8') as f:
             json.dump(perturbation_config, f, indent=4)
+        
+        all_results = load_all_perturbation_files(tx_dir)
 
-        if not path_gain_list:
-            print("No successful perturbations. Exiting.")
-            return
-        else:
-            # Process path_gain_list
-            self.process_path_gain_results(path_gain_list, grid_origin, cm_cell_size, tx_xy, tx_dir)
+        if all_results['path_gain']:
+            # Process all path gain results
+            self.process_path_gain_results(all_results['path_gain'], grid_origin, cm_cell_size, tx_xy, tx_dir)
 
-        if med_list and ds_list:
-            self.process_channel_stats_results(med_list, 'med', grid_origin2, cm_cell_size2, tx_xy, tx_dir)
-            self.process_channel_stats_results(ds_list, 'ds', grid_origin2, cm_cell_size2, tx_xy, tx_dir)
-            self.process_channel_stats_results(K_list, 'K', grid_origin2, cm_cell_size2, tx_xy, tx_dir)
+        if all_results['med'] and all_results['ds'] and all_results['K']:
+            # Process all channel statistics results
+            self.process_channel_stats_results(all_results['med'], 'med', grid_origin2, cm_cell_size2, tx_xy, tx_dir)
+            self.process_channel_stats_results(all_results['ds'], 'ds', grid_origin2, cm_cell_size2, tx_xy, tx_dir)
+            self.process_channel_stats_results(all_results['K'], 'K', grid_origin2, cm_cell_size2, tx_xy, tx_dir)
+
+        drjit_cache = os.path.expanduser("~/.drjit")
+        if os.path.exists(drjit_cache):
+            for root, dirs, files in os.walk(drjit_cache, topdown=False):
+                # Remove files that don't start with .nfs
+                for name in files:
+                    if not name.startswith('.nfs'):
+                        file_path = os.path.join(root, name)
+                        os.remove(file_path)
 
     def run_perturbations(self, num_workers, tasks, process_func, tx_xy):
         """Run perturbations using multiprocessing."""
@@ -254,8 +369,15 @@ class PerturbationSimulationManager:
         with ProcessPoolExecutor(max_workers=num_workers) as executor:
             futures = [executor.submit(process_func, task_args) for task_args in tasks]
             for future in tqdm(as_completed(futures), total=len(futures), desc=f'Processing TX at {tx_xy}'):
-                result = future.result()
+                try:
+                    result = future.result()
+                except Exception as exc:
+                    print(f"A task raised an exception: {exc}")
+                    traceback.print_exc()
+                    continue
+                #result = future.result()
                 results.append(result)
+                
                 if result['success']:
                     path_gain_list.append(result['path_gain'])
                     if grid_origin is None:
@@ -305,9 +427,14 @@ class PerturbationSimulationManager:
         path_gain_array_db = 10 * np.log10(path_gain_masked)
         
         # Calculate statistics (nan values will be automatically excluded)
-        path_gain_mean_db = np.nanmean(path_gain_array_db, axis=0)
-        path_gain_std_db = np.nanstd(path_gain_array_db, axis=0)
-        
+        if path_gain_array_db.size == 0 or np.all(np.isnan(path_gain_array_db)):
+            # Return default values or raise exception based on your needs
+            path_gain_mean_db = np.nan  # or some other default value
+            path_gain_var_db = np.nan   # or some other default value
+        else:
+            path_gain_mean_db = np.nanmean(path_gain_array_db, axis=0)
+            path_gain_std_db = np.nanstd(path_gain_array_db, axis=0)
+            
         # Apply valid locations mask to statistics arrays
         path_gain_mean_db_masked = np.where(valid_locations_mask, path_gain_mean_db, np.nan)
         path_gain_std_db_masked = np.where(valid_locations_mask, path_gain_std_db, np.nan)
@@ -629,6 +756,7 @@ def process_perturbation_gpu(args) -> Dict[str, Any]:
      verbose) = args
 
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
+
     device = '/device:GPU:0'
 
     if verbose:
@@ -655,9 +783,7 @@ def process_perturbation_gpu(args) -> Dict[str, Any]:
         device=device,
         verbose=verbose
     )
-
     return processor.process_perturbation_core()
-
 
 def process_perturbation_cpu(args) -> Dict[str, Any]:
     """Process a single perturbation for CPU parallel processing."""
@@ -740,31 +866,89 @@ class PerturbationProcessor:
         self.verbose = verbose
 
     def process_perturbation_core(self) -> Dict[str, Any]:
-        """Core processing function shared between GPU and CPU implementations."""
-        context = tf.device(self.device) if self.device else nullcontext()
-        with context:
-            # Load the scene
-            scene = load_scene(self.scene_load_name)
-            # Apply perturbations
-            pert_tx_xy, pert_tx_z, perturbation_data = self.apply_perturbations(scene)
-            # Configure the scene
-            self.configure_scene(scene, pert_tx_xy, pert_tx_z)
-            # Process coverage maps and channel statistics
-            result = self.process_coverage_and_stats(scene, pert_tx_xy, pert_tx_z)
-            # Combine results
-            result_dict = {
-                'success': True,
-                'perturbation_data': {
-                    'perturbation_number': self.perturbation_index,
-                    'tx_position': [pert_tx_xy[0], pert_tx_xy[1], pert_tx_z],
-                    'tx_building': self.tx_bldg,
-                    **perturbation_data
-                },
-                **result
+        """Core processing function shared between GPU and CPU implementations with retry mechanism."""
+        max_retries = 3  
+        attempt = 0
+        while True:
+            attempt += 1
+            context = tf.device(self.device) if self.device else nullcontext()
+            
+            # Dictionary to track created variables for cleanup
+            created_vars = {
+                'scene': None,
+                'pert_tx_xy': None,
+                'pert_tx_z': None,
+                'perturbation_data': None,
+                'result': None,
+                'result_dict': None
             }
-            # Clean up
-            self.cleanup(locals())
-            return result_dict
+            
+            try:
+                with context:
+                    # Load the scene
+                    created_vars['scene'] = load_scene(self.scene_load_name)
+                    
+                    # Apply perturbations
+                    created_vars['pert_tx_xy'], created_vars['pert_tx_z'], created_vars['perturbation_data'] = \
+                        self.apply_perturbations(created_vars['scene'])
+                    
+                    # Configure the scene
+                    created_vars['scene'] = self.configure_scene(
+                        created_vars['scene'], 
+                        created_vars['pert_tx_xy'], 
+                        created_vars['pert_tx_z']
+                    )
+                    
+                    # Process coverage maps and channel statistics
+                    created_vars['result'] = self.process_coverage_and_stats(
+                        created_vars['scene'],
+                        created_vars['pert_tx_xy'],
+                        created_vars['pert_tx_z']
+                    )
+                    
+                    # Combine results
+                    created_vars['result_dict'] = {
+                        'success': True,
+                        'perturbation_data': {
+                            'perturbation_number': self.perturbation_index,
+                            'tx_position': [
+                                created_vars['pert_tx_xy'][0],
+                                created_vars['pert_tx_xy'][1],
+                                created_vars['pert_tx_z']
+                            ],
+                            'tx_building': self.tx_bldg,
+                            **created_vars['perturbation_data']
+                        },
+                        **created_vars['result']
+                    }
+                    
+                    if attempt > 1:
+                        logging.info(f"Successfully completed processing after {attempt} attempts")
+                    
+                    return created_vars['result_dict']
+
+            except Exception as e:
+                logging.error(f"Attempt {attempt} failed for task {self.perturbation_index}: {e}")
+                traceback_str = traceback.format_exc()
+                logging.error(traceback_str)
+                
+                # Clean up created variables
+                for var_name, var in created_vars.items():
+                    if var is not None:
+                        try:
+                            if hasattr(var, 'cleanup'):
+                                var.cleanup()
+                            del var
+                            logging.debug(f"Cleaned up variable: {var_name}")
+                        except Exception as cleanup_error:
+                            logging.warning(f"Error cleaning up {var_name}: {cleanup_error}")
+                
+                # Force garbage collection after cleanup
+                gc.collect()
+                
+                if attempt >= max_retries:
+                    logging.error(f"Max retries ({max_retries}) reached. Raising final exception.")
+                    raise
 
     def apply_perturbations(self, scene) -> Tuple[np.ndarray, float, Dict[str, Any]]:
         """Apply various perturbations to the scene."""
@@ -799,7 +983,7 @@ class PerturbationProcessor:
 
         return pert_tx_xy, pert_tx_z, perturbation_data
 
-    def configure_scene(self, scene, pert_tx_xy: np.ndarray, pert_tx_z: float) -> None:
+    def configure_scene(self, scene, pert_tx_xy: np.ndarray, pert_tx_z: float):
         """Configure antenna arrays and transmitter in the scene."""
         scene.tx_array = PlanarArray(
             num_rows=1,
@@ -825,6 +1009,13 @@ class PerturbationProcessor:
             orientation=[0, 0, 0]
         )
         scene.add(tx)
+        
+        len_ris = len(scene._ris)
+        if len_ris:
+            for ris_obj in scene._ris:
+                scene.remove(ris_obj)
+
+        return scene
 
     def process_coverage_and_stats(
         self, scene, pert_tx_xy: np.ndarray, pert_tx_z: float
@@ -842,11 +1033,15 @@ class PerturbationProcessor:
                 ris=False,
                 cm_cell_size=cm_cell_size,
                 num_samples=int(1e6),
+                check_scene=False,
                 num_runs=1
             )
             
             cm_center = cm.center
-            path_gain = cm.path_gain.numpy()[0, :, :]
+            path_gain = cm.path_gain.numpy()[0, :, :].copy()
+
+            del cm
+            gc.collect()
             
             # Save path gain
             self.tx_x_formatted = tx_x_formatted = float(f"{pert_tx_xy[0]:.1f}")
@@ -862,7 +1057,8 @@ class PerturbationProcessor:
             
             if self.analyze_chan_stats:
                 channel_stats, cm2_center, cm2_cell_size = self.process_channel_statistics(scene)
-        return {
+
+            result_dict = {
             'path_gain': path_gain,
             'grid_origin': {
                 'path_gain': cm_center,
@@ -873,7 +1069,12 @@ class PerturbationProcessor:
                 'channel_stats': cm2_cell_size
             },
             'channel_stats': channel_stats
-        }
+            }
+            del path_gain
+            if channel_stats:
+                del channel_stats
+            gc.collect()
+        return result_dict
 
     def process_channel_statistics(
         self, scene
@@ -913,13 +1114,17 @@ class PerturbationProcessor:
         np_filepath = os.path.join(self.tx_dir, np_filename)
         np.save(np_filepath, Ks)
 
+        cm2_center = cm2.center
+        del cm2
+        gc.collect()
+
         return (
             {
                 'delay_spreads': delay_spreads,
                 'mean_excess_delays': mean_excess_delays,
                 'Ks': Ks
             },
-            cm2.center,
+            cm2_center,
             cm2_cell_size
         )
 
@@ -988,7 +1193,7 @@ class PerturbationProcessor:
         a, tau = paths.cir(num_paths=50)
         #print(paths.types)
         del paths
-        
+        gc.collect()
         a = a[0, :, 0, 0, 0, :, 0]
         tau = tau[0, :, 0, :]
         
