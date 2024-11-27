@@ -14,7 +14,6 @@ setup(
         'geopandas',
         'matplotlib',
         'seaborn',
-        'tensorflow[and-cuda]==2.15.1',
         'sionna',
         'geopy',
         'mathutils',
@@ -27,9 +26,17 @@ setup(
         'rasterio',
         'plyfile',
         'requests',
-
     ],
-    python_requires='~=3.10', 
+    extras_require={
+        'gpu': [
+            'nvidia-cudnn-cu12==8.9.2.26',
+            'nvidia-cublas-cu12',
+            'nvidia-cusolver-cu12',
+            'nvidia-cufft-cu12',
+            'nvidia-cusparse-cu12'
+        ]
+    },
+    python_requires='~=3.10',
     scripts=[
         'scripts/call_ge.py',
         'scripts/call_rt.py',
