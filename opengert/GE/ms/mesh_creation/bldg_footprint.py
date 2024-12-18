@@ -55,7 +55,7 @@ class BuildingFootprintProcessor:
         Load the dataset links from the CSV file.
         """
         self.df_links = pd.read_csv(
-            "https://minedbuildings.blob.core.windows.net/global-buildings/dataset-links.csv",
+            "https://minedbuildings.z5.web.core.windows.net/global-buildings/dataset-links.csv",
             dtype=str
         )
 

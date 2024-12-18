@@ -26,6 +26,7 @@ setup(
         'rasterio',
         'plyfile',
         'requests',
+        'gdown'
     ],
     extras_require={
         'gpu': [

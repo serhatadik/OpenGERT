@@ -88,11 +88,9 @@ else:
 
 print(f"Using Mitsuba variant: {mi.variant()}")
 
-# Import Sionna and related modules
 import sionna
 from sionna.rt import load_scene, PlanarArray, Transmitter, Receiver
 
-# Import custom utility functions and classes
 from opengert.RT.utils import (
     perturb_building_heights,
     find_highest_z_at_xy,

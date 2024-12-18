@@ -26,9 +26,6 @@ if __name__ == '__main__':
     from opengert.RT.utils import PerturbationTracker
     multiprocessing.set_start_method('spawn')
 
-    # Initialize your tracker here
-    #tracker = PerturbationTracker()
-
     # Define a list of transmitter locations
     tx_locations = np.random.uniform(-400, 400, (10, 2)).tolist()
 
@@ -57,9 +54,3 @@ if __name__ == '__main__':
     # Process all TX locations
     for tx_xy in tx_locations:
         simulation_manager.process_tx_location(np.array(tx_xy))
-
-    #final_df = tracker.get_dataframe()
-    #print(final_df)
-    #tracker.save_to_csv('/home/hice1/stadik3/OpenGERT/perturbation_results.csv')
-    #summary = tracker.get_perturbation_summary()
-    #print(summary)
