@@ -6,7 +6,7 @@
 
 *Seattle, Georgia Tech, and Manhattan represented in Sionna RT through automatic geometry extraction pipeline.*
 
-## Workflow
+## Geometry Extraction Workflow
 
 ![Workflow Diagram](figures/ge_pipeline.png)
 
