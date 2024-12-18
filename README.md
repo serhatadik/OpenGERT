@@ -25,3 +25,8 @@ Below are the detailed results of our sensitivity analysis conducted on the Etoi
 *Analysis of Path Gain, Mean Excess Delay, and Delay Spread Standard Deviations and Link Outage Frequency with Height Perturbation in Etoile Scene.*
 
 ## Credits
+The [NVIDIA Sionna](https://github.com/NVlabs/sionna) is Apache-2.0 licensed, as found in the [LICENSE](https://github.com/NVlabs/sionna/blob/main/LICENSE) file.
+
+The [Microsoft GlobalMLBuildingFootprints repository](https://github.com/microsoft/GlobalMLBuildingFootprints) is licensed under the Open Data Commons Open Database License (ODbL), as detailed in the repository's [LICENSE file](https://github.com/microsoft/GlobalMLBuildingFootprints/blob/main/LICENSE).
+
+The Digital Elevation Maps (DEMs) used in the second workflow, which involves manual building and terrain mesh creation, are sourced from the [United States Geological Survey (USGS)](https://www.usgs.gov/3d-elevation-program) website. Specifically, the 1-meter DEM storage links were manually collected from the [USGS Downloader](https://apps.nationalmap.gov/downloader/).
