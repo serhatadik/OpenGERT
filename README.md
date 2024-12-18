@@ -33,10 +33,10 @@ If you already have the scene `.xml` file and meshes ready, or prefer to use the
 1. **Clone the OpenGERT Repository**
 
    Open your terminal or command prompt and execute the following command:
-
+   ```
    git clone https://github.com/serhatadik/OpenGERT.git
    cd OpenGERT
-
+    ```
 2. **Set Up a Virtual Environment and Install OpenGERT**
 
    - **Create a Virtual Environment:**
