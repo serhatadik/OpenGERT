@@ -12,31 +12,34 @@
 
 ## Sensitivity Analysis
 
-```markdown
-<div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;">
+<div align="center">
 
-  <figure style="width: 45%;">
-    <img src="figures/tx_60.6_149.6_path_gain_std.png" alt="Path Gain Standard Deviation, Height Perturbation, Etoile" style="width: 100%; height: auto;">
-    <figcaption><strong>Path Gain Standard Deviation, Height Perturbation, Etoile</strong></figcaption>
-  </figure>
+  <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;">
+    
+    <figure style="width: 45%;">
+      <img src="figures/tx_60.6_149.6_path_gain_std.png" alt="Path Gain Standard Deviation, Height Perturbation, Etoile" style="width: 100%; height: auto;">
+      <figcaption><strong>Path Gain Standard Deviation, Height Perturbation, Etoile</strong></figcaption>
+    </figure>
+    
+    <figure style="width: 45%;">
+      <img src="figures/tx_60.6_149.6_broken_links_freq.png" alt="Link Outage Frequency, Height Perturbation, Etoile" style="width: 100%; height: auto;">
+      <figcaption><strong>Link Outage Frequency, Height Perturbation, Etoile</strong></figcaption>
+    </figure>
+    
+    <figure style="width: 45%;">
+      <img src="figures/tx_60.6_149.6_med_std.png" alt="Mean Excess Delay Standard Deviation, Height Perturbation, Etoile" style="width: 100%; height: auto;">
+      <figcaption><strong>Mean Excess Delay Standard Deviation, Height Perturbation, Etoile</strong></figcaption>
+    </figure>
+    
+    <figure style="width: 45%;">
+      <img src="figures/tx_60.6_149.6_ds_std.png" alt="Delay Spread Standard Deviation, Height Perturbation, Etoile" style="width: 100%; height: auto;">
+      <figcaption><strong>Delay Spread Standard Deviation, Height Perturbation, Etoile</strong></figcaption>
+    </figure>
+  
+  </div>
 
-  <figure style="width: 45%;">
-    <img src="figures/tx_60.6_149.6_broken_links_freq.png" alt="Link Outage Frequency, Height Perturbation, Etoile" style="width: 100%; height: auto;">
-    <figcaption><strong>Link Outage Frequency, Height Perturbation, Etoile</strong></figcaption>
-  </figure>
-
-  <figure style="width: 45%;">
-    <img src="figures/tx_60.6_149.6_med_std.png" alt="Mean Excess Delay Standard Deviation, Height Perturbation, Etoile" style="width: 100%; height: auto;">
-    <figcaption><strong>Mean Excess Delay Standard Deviation, Height Perturbation, Etoile</strong></figcaption>
-  </figure>
-
-  <figure style="width: 45%;">
-    <img src="figures/tx_60.6_149.6_ds_std.png" alt="Delay Spread Standard Deviation, Height Perturbation, Etoile" style="width: 100%; height: auto;">
-    <figcaption><strong>Delay Spread Standard Deviation, Height Perturbation, Etoile</strong></figcaption>
-  </figure>
+  <p><em>Analysis of Path Gain, Mean Excess Delay, and Delay Spread Standard Deviations and Link Outage Frequency with Height Perturbation in Etoile Scene</em></p>
 
 </div>
-
-<p style="text-align: center;"><em>Analysis of Path Gain, Mean Excess Delay, and Delay Spread Standard Deviations and Link Outage Frequency with Height Perturbation in Etoile Scene</em></p>
 
 ## Credits
