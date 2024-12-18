@@ -36,37 +36,37 @@ If you already have the scene `.xml` file and meshes ready, or prefer to use the
    ```
    git clone https://github.com/serhatadik/OpenGERT.git
    cd OpenGERT
-    ```
+   ```
 2. **Set Up a Virtual Environment and Install OpenGERT**
 
    - **Create a Virtual Environment:**
-
+     ```
      python3 -m venv venv
-
+     ```
      *This command creates a virtual environment named `venv`.*
 
    - **Activate the Virtual Environment:**
 
      - **On macOS/Linux:**
-
+       ```
        source venv/bin/activate
-
+       ```
      - **On Windows:**
-
+       ```
        venv\Scripts\activate
-
+       ```
    - **Install the OpenGERT Package:**
-
+     ```
      pip install -e .
-
+     ```
      *This command installs the OpenGERT package in editable mode.*
 
 3. **Verify the Installation**
 
    - Ensure that the OpenGERT package is installed correctly by running:
-
+     ```
      pip list
-
+     ```
      *You should see `OpenGERT` listed among the installed packages.*
 
 4. **Using Pre-Extracted Scenes**
