@@ -69,13 +69,6 @@ If you already have the scene `.xml` file and meshes ready, or prefer to use the
      ```
      *You should see `OpenGERT` listed among the installed packages.*
 
-4. **Using Pre-Extracted Scenes**
-
-   - **Available Scenes:** Munich and Etoile
-   - **Usage Instructions:**
-     - Refer to the [OpenGERT Documentation](https://github.com/serhatadik/OpenGERT#readme) for detailed instructions on how to load and utilize the pre-extracted scenes within Sionna RT.
-     - Ensure that the scene `.xml` files and associated meshes are placed in the correct directories as specified in the documentation.
-
 ### **Additional Tips**
 
 - **Troubleshooting:**
