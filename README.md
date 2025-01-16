@@ -150,6 +150,21 @@ Below are the detailed results of our sensitivity analysis conducted on the Etoi
 
 *Analysis of Path Gain, Mean Excess Delay, and Delay Spread Standard Deviations and Link Outage Frequency with Height Perturbation in Etoile Scene.*
 
+## Citation
+If you use OpenGERT in your research, please cite the following:
+
+```bibtex
+@misc{tadik2025opengertopensourceautomated,
+      title={OpenGERT: Open Source Automated Geometry Extraction with Geometric and Electromagnetic Sensitivity Analyses for Ray-Tracing Propagation Models}, 
+      author={Serhat Tadik and Rajib Bhattacharjea and Johnathan Corgan and David Johnson and Jacobus Van der Merwe and Gregory D. Durgin},
+      year={2025},
+      eprint={2501.06945},
+      archivePrefix={arXiv},
+      primaryClass={eess.SP},
+      url={https://arxiv.org/abs/2501.06945}, 
+}
+```
+
 ## Credits
 The [NVIDIA Sionna](https://github.com/NVlabs/sionna) is Apache-2.0 licensed, as found in the [LICENSE](https://github.com/NVlabs/sionna/blob/main/LICENSE) file.
 
