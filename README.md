@@ -26,6 +26,30 @@ If you need to perform automated geometry extraction, follow these steps:
      - **Download Link:** [Mitsuba-Blender Releases](https://github.com/mitsuba-renderer/mitsuba-blender/releases)
      - **Important:** *Do **not** use Mitsuba-Blender v0.4.0, as it is **not** compatible and will not work.*
 
+3. **Function 3: Run the Geometry Extraction Script**
+
+Once you have installed Blender and the required add-ons, you can extract geometry by `cd`ing into OpenGERT directory and running the `scripts/call_ge.py` script. This script requires command-line arguments to specify:
+
+- The source of geometry extraction: **`osm`** or **`ms`**  
+- The minimum and maximum longitude: **`min_lon`** and **`max_lon`**  
+- The minimum and maximum latitude: **`min_lat`** and **`max_lat`**
+- The blosm and mitsuba_blender paths: **`blosm_path`** and **`mitsuba_blender_path`**
+- The data directory in which the scene files will be stored: **`data_dir`**
+- The xml filename that will represent the scene: **`export_filename`**
+
+#### **Usage Example**
+
+```bash
+python scripts/call_ge.py --source osm \
+                          --min_lon -84.4072707707409 --max_lon -84.38723383499998 \
+                          --min_lat 33.77146527573862  --max_lat 33.78140275118028 \
+                          --blosm_path C:\Users\serha\blosm_2.7.8.zip \
+                          --mitsuba_blender_path C:\Users\serha\mitsuba-blender.zip \
+                          --data_dir C:\Users\serha\OpenGERT\data\gatech \
+                          --export_filename "gt.xml" \
+```
+
+The script will automatically extract the relevant geometry from the chosen source and prepare it for further processing.
 ### **Function 2: Sensitivity Analysis Using Pre-Extracted Scenes**
 
 If you already have the scene `.xml` file and meshes ready, or prefer to use the pre-existing Munich or Etoile scenes in Sionna RT without performing geometry extraction, follow these steps:
