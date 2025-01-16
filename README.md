@@ -26,7 +26,7 @@ If you need to perform automated geometry extraction, follow these steps:
      - **Download Link:** [Mitsuba-Blender Releases](https://github.com/mitsuba-renderer/mitsuba-blender/releases)
      - **Important:** *Do **not** use Mitsuba-Blender v0.4.0, as it is **not** compatible and will not work.*
 
-3. **Function 3: Run the Geometry Extraction Script**
+3. **Run the Geometry Extraction Script**
    
    Once you have installed Blender and the required add-ons, you can extract geometry by `cd`ing into OpenGERT directory and running the `scripts/call_ge.py` script. This script requires command-line arguments to specify:
    
@@ -52,19 +52,19 @@ If you need to perform automated geometry extraction, follow these steps:
    The script will automatically extract the relevant geometry from the chosen source and prepare it for further processing.
 ### **Function 2: Sensitivity Analysis Using Pre-Extracted Scenes**
 
-If you already have the scene `.xml` file and meshes ready, or prefer to use the pre-existing Munich or Etoile scenes in Sionna RT without performing geometry extraction, follow these steps:
+If you already have a `.xml` scene file and meshes ready (or prefer to use the pre-existing Munich or Etoile scenes in Sionna RT without performing geometry extraction), follow these steps:
 
 1. **Clone the OpenGERT Repository**
 
-   Open your terminal or command prompt and execute the following command:
-   ```
+   ```bash
    git clone https://github.com/serhatadik/OpenGERT.git
    cd OpenGERT
    ```
+
 2. **Set Up a Virtual Environment and Install OpenGERT**
 
    - **Create a Virtual Environment:**
-     ```
+     ```bash
      python3 -m venv venv
      ```
      *This command creates a virtual environment named `venv`.*
@@ -72,26 +72,59 @@ If you already have the scene `.xml` file and meshes ready, or prefer to use the
    - **Activate the Virtual Environment:**
 
      - **On macOS/Linux:**
-       ```
+       ```bash
        source venv/bin/activate
        ```
      - **On Windows:**
-       ```
+       ```bash
        venv\Scripts\activate
        ```
    - **Install the OpenGERT Package:**
-     ```
+     ```bash
      pip install -e .
      ```
-     *This command installs the OpenGERT package in editable mode.*
+     *Installs OpenGERT in editable mode.*
 
 3. **Verify the Installation**
 
    - Ensure that the OpenGERT package is installed correctly by running:
-     ```
+     ```bash
      pip list
      ```
      *You should see `OpenGERT` listed among the installed packages.*
+
+4. **Configure and Run the Perturbation Analysis**
+
+   To conduct a perturbation analysis, open the file `scripts/run_montecarlo.py` and modify the `perturbation_config` dictionary according to your needs. Below is an example configuration with some default values:
+
+   ```python
+   perturbation_config = {
+       'scene_name': "munich",  # Enter the file name with .xml extension if not using a default Sionna RT scene.
+       'use_gpu': USE_GPU,
+       'analyze_chan_stats': True,
+       'batch_size': 70 if USE_GPU else 20,
+       'output_dir': "results_munich_height_pert",
+       'device': '/device:GPU:0' if USE_GPU else '/device:CPU:0',
+       'num_perturbations': 50 if USE_GPU else 30,
+       'tx_antenna_height': 6,
+       'sim_material_perturbation': False,
+       'rel_perm_sigma_ratio': 0.1,  # Effective only if 'sim_material_perturbation' = True
+       'cond_sigma_ratio': 0.1,      # Effective only if 'sim_material_perturbation' = True
+       'sim_building_height_perturbation': True,
+       'perturb_sigma_height': 1,    # Effective only if 'sim_building_height_perturbation' = True
+       'sim_building_position_perturbation': False,
+       'perturb_sigma_position': 0.4, # Effective only if 'sim_building_position_perturbation' = True
+       'verbose': False
+   }
+   ```
+
+   After adjusting any parameters (e.g., scene name, number of perturbations, whether to use height or position perturbations, etc.), run:
+
+   ```bash
+   python scripts/run_montecarlo.py
+   ```
+
+   This script will apply the specified perturbations to your scene and produce results in the directory you specified (e.g., `results_munich_height_pert`).
 
 ### **Additional Tips**
 
