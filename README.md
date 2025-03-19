@@ -26,7 +26,47 @@ If you need to perform automated geometry extraction, follow these steps:
      - **Download Link:** [Mitsuba-Blender Releases](https://github.com/mitsuba-renderer/mitsuba-blender/releases)
      - **Important:** *Do **not** use Mitsuba-Blender v0.4.0, as it is **not** compatible and will not work.*
 
-3. **Run the Geometry Extraction Script**
+
+3. **Clone the OpenGERT Repository**
+
+   ```bash
+   git clone https://github.com/serhatadik/OpenGERT.git
+   cd OpenGERT
+   ```
+
+4. **Set Up a Virtual Environment and Install OpenGERT**
+
+   - **Create a Virtual Environment:**
+     ```bash
+     python3 -m venv venv
+     ```
+     *This command creates a virtual environment named `venv`.*
+
+   - **Activate the Virtual Environment:**
+
+     - **On macOS/Linux:**
+       ```bash
+       source venv/bin/activate
+       ```
+     - **On Windows:**
+       ```bash
+       venv\Scripts\activate
+       ```
+   - **Install the OpenGERT Package:**
+     ```bash
+     pip install -e .
+     ```
+     *Installs OpenGERT in editable mode.*
+
+5. **Verify the Installation**
+
+   - Ensure that the OpenGERT package is installed correctly by running:
+     ```bash
+     pip list
+     ```
+     *You should see `OpenGERT` listed among the installed packages.*
+
+6. **Run the Geometry Extraction Script**
    
    Once you have installed Blender and the required add-ons, you can extract geometry by `cd`ing into OpenGERT directory and running the `scripts/call_ge.py` script. This script requires command-line arguments to specify:
    
