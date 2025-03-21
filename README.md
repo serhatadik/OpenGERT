@@ -19,7 +19,7 @@ If you need to perform automated geometry extraction, follow these steps:
 
 2. **Download and Install Required Blender Add-ons**
 
-   - **Blosm 2.7.8:**
+   - **Blosm 2.7.8**
 
    - **Mitsuba-Blender Add-on (Version 0.3.0 or Nightly Release):**
      - **Download Link:** [Mitsuba-Blender Releases](https://github.com/mitsuba-renderer/mitsuba-blender/releases)
