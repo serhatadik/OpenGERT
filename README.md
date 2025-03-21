@@ -31,7 +31,6 @@ If you need to perform automated geometry extraction, follow these steps:
 
    ```bash
    git clone https://github.com/serhatadik/OpenGERT.git
-   cd OpenGERT
    ```
 
 4. **Set Up a Virtual Environment and Install OpenGERT**
@@ -54,6 +53,7 @@ If you need to perform automated geometry extraction, follow these steps:
        ```
    - **Install the OpenGERT Package:**
      ```bash
+     cd OpenGERT
      pip install -e .
      ```
      *Installs OpenGERT in editable mode.*
@@ -98,7 +98,6 @@ If you already have a `.xml` scene file and meshes ready (or prefer to use the p
 
    ```bash
    git clone https://github.com/serhatadik/OpenGERT.git
-   cd OpenGERT
    ```
 
 2. **Set Up a Virtual Environment and Install OpenGERT**
@@ -121,6 +120,7 @@ If you already have a `.xml` scene file and meshes ready (or prefer to use the p
        ```
    - **Install the OpenGERT Package:**
      ```bash
+     cd OpenGERT
      pip install -e .
      ```
      *Installs OpenGERT in editable mode.*
