@@ -212,3 +212,6 @@ The [NVIDIA Sionna](https://github.com/NVlabs/sionna) is Apache-2.0 licensed, as
 The [Microsoft GlobalMLBuildingFootprints repository](https://github.com/microsoft/GlobalMLBuildingFootprints) is licensed under the Open Data Commons Open Database License (ODbL), as detailed in the repository's [LICENSE file](https://github.com/microsoft/GlobalMLBuildingFootprints/blob/main/LICENSE).
 
 The Digital Elevation Maps (DEMs) used in the second workflow, which involves manual building and terrain mesh creation, are sourced from the [United States Geological Survey (USGS)](https://www.usgs.gov/3d-elevation-program) website. Specifically, the 1-meter DEM storage links were manually collected from the [USGS Downloader](https://apps.nationalmap.gov/downloader/).
+
+This project makes use of code or functionality from the [Blosm addon for Blender](https://github.com/vvoovv/blosm), licensed under the [GNU GPL v3](https://www.gnu.org/licenses/gpl-3.0.en.html).
+
