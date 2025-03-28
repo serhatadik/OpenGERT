@@ -20,6 +20,8 @@ If you need to perform automated geometry extraction, follow these steps:
 2. **Download and Install Required Blender Add-ons**
 
    - **Blosm 2.7.8**
+      - Visit the [blosm Github repo tree v2.7.8](https://github.com/vvoovv/blosm/tree/v2.7.8) and download it as zip.
+      - Feel free to support the developers by purchasing the latest version of the package at the [official blosm download page](https://prochitecture.gumroad.com/l/blender-osm). But keep in mind that the latest version (v2.7.14) is known to be not compatible with             OpenGERT.
 
    - **Mitsuba-Blender Add-on (Version 0.3.0 or Nightly Release):**
      - **Download Link:** [Mitsuba-Blender Releases](https://github.com/mitsuba-renderer/mitsuba-blender/releases)
