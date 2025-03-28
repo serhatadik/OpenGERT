@@ -36,7 +36,7 @@ If you need to perform automated geometry extraction, follow these steps:
 
    - **Create a Virtual Environment:**
      ```bash
-     python3 -m venv venv
+     python3.10 -m venv venv
      ```
      *This command creates a virtual environment named `venv`.*
 
@@ -103,7 +103,7 @@ If you already have a `.xml` scene file and meshes ready (or prefer to use the p
 
    - **Create a Virtual Environment:**
      ```bash
-     python3 -m venv venv
+     python3.10 -m venv venv
      ```
      *This command creates a virtual environment named `venv`.*
 
