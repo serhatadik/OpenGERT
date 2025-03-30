@@ -14,7 +14,7 @@ setup(
         'geopandas',
         'matplotlib',
         'seaborn',
-        'sionna',
+        'sionna==0.19.0',
         'geopy',
         'mathutils',
         'mercantile',
