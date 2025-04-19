@@ -34,12 +34,13 @@ class SimulationScene:
 
     def change_unk_materials(self, default_name = "itu_marble"):
         """
-        Finds the highest z value at a given (x, y) pair in the scene.
+        Changes the radio material of scene objects with invalid material names.
         
-        :param scene: A Scene object containing a list of 3D objects
-        :param query_x: The x coordinate to query
-        :param query_y: The y coordinate to query
-        :return: The highest z value at the queried (x, y) position
+        This function finds all scene objects whose radio material name doesn't 
+        start with "itu" and replaces them with a default radio material.
+        
+        :param default_name: The name of the default radio material to use (default: "itu_marble")
+        :return: None
         """
         invalid_rm_names = {}
         for key in self.scene._scene_objects.keys():
