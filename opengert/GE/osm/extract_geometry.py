@@ -64,7 +64,7 @@ class GeoExtentToSceneXML():
             # Create a new material
             mat = bpy.data.materials.new(name=name)
             mat.use_nodes = True  # Enable nodes
-            
+
             # Get the Principled BSDF node
             bsdf = mat.node_tree.nodes.get('Principled BSDF')
             if bsdf is not None:
@@ -89,19 +89,19 @@ class GeoExtentToSceneXML():
         bpy.ops.blosm.import_data()
 
         return None
-    
+
     def update_materials(
         self,
-        metal_rgba = (0.5, 0.5, 0.5, 1.0), 
+        metal_rgba = (0.5, 0.5, 0.5, 1.0),
         marble_rgba = (0.4, 0.04, 0.04, 1.0),
         #terrain_rgba = (0.05, 0.5, 0.3, 1.0), #green
         terrain_rgba = (0.05, 0.05, 0.05, 0.2), #black
         #terrain_rgba = (0.35, 0.35, 0.35, 0.4), #white
-        default_rgba = (0.4, 0.04, 0.04, 1.0), 
-        roof_material_name="itu_metal", 
-        wall_material_name="itu_marble", 
+        default_rgba = (0.4, 0.04, 0.04, 1.0),
+        roof_material_name="itu_metal",
+        wall_material_name="itu_marble",
         terrain_material_name="itu_concrete",
-        default_material_name="itu_brick", 
+        default_material_name="itu_brick",
     ):
         # Create materials with the specified RGBA values
         roof_material = self.create_material(roof_material_name, metal_rgba)
@@ -111,6 +111,7 @@ class GeoExtentToSceneXML():
 
         # Iterate over all objects in the scene
         for obj in bpy.context.scene.objects:
+            obj.name = self.sanitize_name(obj.name)
             if obj.type == 'MESH':  # Check if the object is a mesh
                 if obj.data.materials:
                     # Iterate over the object's materials and replace based on their names
@@ -135,25 +136,57 @@ class GeoExtentToSceneXML():
                             default_material = terrain_material
                         else:
                             default_material = self.create_material(default_material_name, default_rgba)
-                        
+
                         # No materials, so assign the default material
                         obj.data.materials.append(default_material)
 
         print("[INFO]: Materials updated successfully!")
         return None
 
-    
+
     def export_scene_to_xml(self, export_filename="example.xml"):
+        for obj in bpy.context.scene.objects:
+            if obj.type == 'MESH':
+                obj.name = self.sanitize_name(obj.name)
+
         # Assuming mitsuba-blender provides an export operator
         export_path = os.path.join(self.data_dir, export_filename)
         bpy.ops.export_scene.mitsuba(filepath=export_path, export_ids=True, axis_forward='Y', axis_up = 'Z', ignore_background=True)
 
+        self.fix_xml_encoding(export_path)
+
         print(f"[INFO]: Scene exported to {export_path}")
         return None
-    
+
+    def fix_xml_encoding(self, xml_path):
+        """Fix encoding issues in the exported XML file and correct mesh path references."""
+        import xml.etree.ElementTree as ET
+
+        try:
+            tree = ET.parse(xml_path)
+            root = tree.getroot()
+
+            # Find all mesh references and ensure they match actual filenames
+            for elem in root.findall(".//shape[@type='ply']"):
+                filename_elem = elem.find("string[@name='filename']")
+                if filename_elem is not None:
+                    old_filename = filename_elem.attrib.get('value', '')
+
+                    # Fix "meshes_" prefix issue
+                    if old_filename.startswith("meshes_"):
+                        new_filename = old_filename.replace("meshes_", "", 1)
+                        filename_elem.attrib['value'] = new_filename
+                        print(f"[INFO]: Fixed path reference: {old_filename} -> {new_filename}")
+
+            # Write back the corrected XML
+            tree.write(xml_path, encoding='utf-8')
+            print(f"[INFO]: Fixed path references in {xml_path}")
+        except Exception as e:
+            print(f"[ERROR]: Failed to fix XML: {e}")
+
     def delete_remnants(self):
 
-        folder_paths = [os.path.join(self.data_dir, 'osm'), os.path.join(self.data_dir, 'terrain')] 
+        folder_paths = [os.path.join(self.data_dir, 'osm'), os.path.join(self.data_dir, 'terrain')]
         for folder_path in folder_paths:
             try:
                 shutil.rmtree(folder_path)
@@ -162,3 +195,39 @@ class GeoExtentToSceneXML():
                 print(f"Error: {e.strerror}")
 
         return None
+
+    def sanitize_name(self, name):
+        """Convert non-ASCII characters to ASCII or replace them with unique identifiers."""
+        import unicodedata
+        import re
+        import hashlib
+
+        # If the name is already ASCII-only, return it as is
+        if all(ord(c) < 128 for c in name):
+            return name
+
+        # Try to convert to ASCII first (transliteration)
+        name_ascii = unicodedata.normalize('NFKD', name).encode('ASCII', 'ignore').decode('ASCII')
+
+        # If that results in an empty string or has non-ASCII characters remaining, use a hashed approach
+        if not name_ascii or any(ord(c) >= 128 for c in name):
+            # Extract the ASCII part if it exists
+            prefix = name_ascii if name_ascii else ""
+            
+            # Get non-ASCII part
+            non_ascii_part = ''.join(c for c in name if ord(c) >= 128)
+
+            # Create a short hash of the non-ASCII part to ensure uniqueness
+            hash_id = hashlib.md5(non_ascii_part.encode('utf-8')).hexdigest()[:8]
+
+            # Combine prefix with hash
+            name_ascii = f"{prefix}_{hash_id}" if prefix else f"obj_{hash_id}"
+
+        # Replace any remaining invalid characters for filenames
+        name_ascii = re.sub(r'[^\w\-_.]', '_', name_ascii)
+
+        # Ensure the name is not empty
+        if not name_ascii:
+            name_ascii = "unnamed_object"
+
+        return name_ascii
