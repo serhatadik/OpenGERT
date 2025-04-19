@@ -2,14 +2,14 @@ from setuptools import setup, find_packages
 
 setup(
     name='opengert',
-    version='0.1.0',
+    version='0.2.0',
     description='Open source geometry extraction and ray-tracing module.',
     author='Serhat Tadik',
     author_email='serhat.tadik@gatech.edu',
     packages=find_packages(),
     install_requires=[
-        'bpy==3.6',
-        'mitsuba==3.4.1',
+        'bpy==4.2.0',
+        'mitsuba==3.5.0',
         'pandas',
         'geopandas',
         'matplotlib',
@@ -26,7 +26,8 @@ setup(
         'rasterio',
         'plyfile',
         'requests',
-        'gdown'
+        'gdown',
+        'ipykernel'
     ],
     extras_require={
         'gpu': [
@@ -37,7 +38,7 @@ setup(
             'nvidia-cusparse-cu12'
         ]
     },
-    python_requires='~=3.10',
+    python_requires='~=3.11',
     scripts=[
         'scripts/call_ge.py',
         'scripts/call_rt.py',

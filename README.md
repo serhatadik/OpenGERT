@@ -11,21 +11,19 @@
 
 If you need to perform automated geometry extraction, follow these steps:
 
-1. **Install Blender Software (Version 3.6)**
+1. **Install Blender Software (Version 4.2)**
    
-   - **Download Blender 3.6:**
-     - Visit the [official Blender download page](https://www.blender.org/download/releases/3-6/) to download Blender version 3.6.
+   - **Download Blender 4.2:**
+     - Visit the [official Blender download page](https://www.blender.org/download/lts/4-2/) to download Blender version 4.2.
      - Choose the appropriate installer for your operating system and follow the installation instructions.
 
 2. **Download and Install Required Blender Add-ons**
 
-   - **Blosm 2.7.8**
-      - Visit the [blosm Github repo tree v2.7.8](https://github.com/vvoovv/blosm/tree/v2.7.8) and download it as zip.
-      - Feel free to support the developers by purchasing the latest version of the package at the [official blosm download page](https://prochitecture.gumroad.com/l/blender-osm). But keep in mind that the latest version (v2.7.14) is known to be not compatible with the current version of OpenGERT.
+   - **Blosm 2.7.14**
+      - Go to the [official blosm download page](https://prochitecture.gumroad.com/l/blender-osm) to download blosm version 2.7.14.
 
-   - **Mitsuba-Blender Add-on (Version 0.3.0 or Nightly Release):**
+   - **Mitsuba-Blender Add-on (Version 0.4.0 or Nightly Release):**
      - **Download Link:** [Mitsuba-Blender Releases](https://github.com/mitsuba-renderer/mitsuba-blender/releases)
-     - **Important:** *Do **not** use Mitsuba-Blender v0.4.0, as it is **not** compatible and will not work.*
 
 
 3. **Clone the OpenGERT Repository**
@@ -36,9 +34,9 @@ If you need to perform automated geometry extraction, follow these steps:
 
 4. **Set Up a Virtual Environment and Install OpenGERT**
 
-   - **Create a Virtual Environment:**
+   - **Create a Virtual Environment using Python 3.11:**
      ```bash
-     python3.10 -m venv venv
+     python3.11 -m venv venv
      ```
      *This command creates a virtual environment named `venv`.*
 
@@ -86,7 +84,7 @@ If you need to perform automated geometry extraction, follow these steps:
                              --min_lat 33.77146527573862  --max_lat 33.78140275118028 \
                              --blosm_path C:\Users\serha\blosm_2.7.8.zip \
                              --mitsuba_blender_path C:\Users\serha\mitsuba-blender.zip \
-                             --data_dir C:\Users\serha\OpenGERT\data\gatech \
+                             --data_dir .\data\gatech \
                              --export_filename "gt.xml"
    ```
    
@@ -105,7 +103,7 @@ If you already have a `.xml` scene file and meshes ready (or prefer to use the p
 
    - **Create a Virtual Environment:**
      ```bash
-     python3.10 -m venv venv
+     python3.11 -m venv venv
      ```
      *This command creates a virtual environment named `venv`.*
 
