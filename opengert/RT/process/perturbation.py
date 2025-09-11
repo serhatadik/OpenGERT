@@ -1225,16 +1225,21 @@ class PerturbationProcessor:
         non_zero_mask = total_power > 0
         
         # Initialize output arrays
-        mean_delay = np.zeros(len(a))
+        mean_excess_delay = np.zeros(len(a))
         delay_spread = np.zeros(len(a))
         
-        # Compute mean delay only for valid paths
-        mean_delay[non_zero_mask] = np.sum(
-            tau_array[non_zero_mask] * masked_power[non_zero_mask], axis=1
+        tau_for_min = np.where(valid_paths_mask, tau_array, np.inf)
+        tau_0 = np.min(tau_for_min, axis=1)
+        tau_excess = tau_array - tau_0[:, np.newaxis]
+        masked_tau_excess = tau_excess * valid_paths_mask
+
+        # Compute mean excess delay only for valid paths
+        mean_excess_delay[non_zero_mask] = np.sum(
+            masked_tau_excess[non_zero_mask] * masked_power[non_zero_mask], axis=1
         ) / total_power[non_zero_mask]
         
         # Compute delay spread
-        tau_diff = tau_array - mean_delay[:, np.newaxis]
+        tau_diff = tau_excess - mean_excess_delay[:, np.newaxis]
         
         # Mask tau_diff values corresponding to invalid paths
         masked_tau_diff = tau_diff * valid_paths_mask
@@ -1268,7 +1273,7 @@ class PerturbationProcessor:
         # Handle cases where total power is zero
         K[~non_zero_mask] = np.nan 
 
-        return delay_spread.tolist(), mean_delay.tolist(), K.tolist()
+        return delay_spread.tolist(), mean_excess_delay.tolist(), K.tolist()
 
     def reshape_results(
         self, delay_spreads: List[float], mean_excess_delays: List[float], Ks:List[Optional[float]], cell_centers_shape: Tuple[int, int], num_cells: int
